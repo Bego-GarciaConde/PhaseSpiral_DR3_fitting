@@ -11,7 +11,6 @@ from scipy import stats
 from os.path import expanduser
 home = expanduser("~")
 
-from function_tools import *
 from variables_config import *
 
 def auto_canny(image, sigma=0.33):
