@@ -162,6 +162,10 @@ def main():
     ax[0].set_box_aspect(1)
     ax[1].set_box_aspect(1)
     plt.show()
+    plt.close()
+
+
+
 
 
 if __name__ == "__main__":
