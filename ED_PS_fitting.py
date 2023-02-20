@@ -3,7 +3,7 @@
 
 from os.path import expanduser
 
-home = expanduser("~")
+# home = expanduser("~")
 # from skimage import feature
 from sklearn import linear_model, datasets
 from sklearn.linear_model import RANSACRegressor
