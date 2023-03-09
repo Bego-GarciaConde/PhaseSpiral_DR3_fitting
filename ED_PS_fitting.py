@@ -31,13 +31,7 @@ from sklearn.linear_model import LinearRegression, RANSACRegressor
 from astropy.table import Table
 import hdbscan
 
-rcParams['font.family'] = 'sans-serif'
-rcParams["font.size"] = 8
-rcParams["font.family"] = "Arial"
-rcParams['mathtext.fontset'] = 'custom'
-rcParams['mathtext.it'] = 'Arial:italic'
-rcParams['mathtext.rm'] = 'Arial'
-rcParams['pdf.fonttype'] = 42
+
 
 
 def main():
@@ -96,6 +90,9 @@ def main():
     # TODO: Is there another way to filter inliers/outliers only with hdbscan?
     phiz = np.array(spiral["Phi_trans"]).reshape(-1, 1)
     rz = np.array(spiral["R"]).reshape(-1, 1)
+
+
+
     lr = linear_model.LinearRegression()
     lr.fit(phiz, rz)
 
@@ -109,10 +106,13 @@ def main():
 
     phiz = phiz[inlier_mask]
     rz = rz[inlier_mask]
+
     # ----- LINEAR, QUADRATIC, LOG REGRESSION---- WHICH ONE FITS BETTER?----
     regr = LinearRegression()
+
     quadratic = PolynomialFeatures(degree=2)
     cubic = PolynomialFeatures(degree=3)
+
     Phi_quad = quadratic.fit_transform(phiz)
     Phi_cubic = cubic.fit_transform(phiz)
 
@@ -121,7 +121,7 @@ def main():
     regr = regr.fit(phiz, rz)
     r_lin_fit = regr.predict(Phi_fit)
     linear_r2 = r2_score(rz, regr.predict(phiz))
-    print(f"reg coef is {regr.coef_}")
+   # print(f"reg coef is {regr.coef_}")
 
     regr = regr.fit(phiz, np.log(rz))
     r_log_fit = regr.predict(Phi_fit)

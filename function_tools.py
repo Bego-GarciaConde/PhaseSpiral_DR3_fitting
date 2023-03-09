@@ -8,8 +8,8 @@ from matplotlib import rcParams
 from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 from scipy import stats
-from os.path import expanduser
-home = expanduser("~")
+
+
 
 from variables_config import *
 
