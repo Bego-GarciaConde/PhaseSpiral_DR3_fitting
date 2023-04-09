@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
@@ -9,9 +8,8 @@ from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 from scipy import stats
 
+from config import *
 
-
-from variables_config import *
 
 def auto_canny(image, sigma=0.33):
     # compute the median of the single channel pixel intensities
@@ -36,7 +34,6 @@ def fit_curve(a, data):
 
 def calc_histogram_cartesian(df, z_bins, vz_bins, weights=None):
     if weights is None:
-        #H,xedges, yedges = np.histogram2d(df['Z'].values, df['VZ'].values,bins=[z_bins,vz_bins],range=[rangex,rangey])
         H, xedges, yedges = np.histogram2d(df['Z'].values, df['VZ'].values, bins=[z_bins, vz_bins],
                                            range=[rangex, rangey],
                                            normed=mcolors.PowerNorm(3))
@@ -51,7 +48,6 @@ def calc_histogram_cartesian(df, z_bins, vz_bins, weights=None):
     return H, xedges, yedges
 
 
-
 def model_f(x, a, b, h):
     # return a*x + b
     return a * (x - h) ** 2 + b
@@ -60,9 +56,6 @@ def model_f(x, a, b, h):
 def model_f_reverse(x, a, b, h):
     # return (x-b)/a
     return np.sqrt((x - b) / a) + h
-
-
-
 
 
 nbOfColours = 257
