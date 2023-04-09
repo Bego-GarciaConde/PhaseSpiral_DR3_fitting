@@ -1,17 +1,15 @@
-from config import *
-from utils import *
+import hdbscan
 import numpy as np
 import pandas as pd
-import cv2
+from matplotlib import pyplot as plt
 from skimage import feature
-from sklearn.linear_model import RANSACRegressor
-from sklearn.datasets import make_regression
-from sklearn.preprocessing import PolynomialFeatures
+from sklearn import linear_model
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
-from sklearn.linear_model import LinearRegression, RANSACRegressor
-from sklearn import linear_model, datasets
-import hdbscan
+from sklearn.preprocessing import PolynomialFeatures
+
+from utils import *
+
 
 class GaiaVolume():
     def __init__(self, data, r_cut, phi_cut=phi_cut, r_bin=0.8, phi_bin=phi_bin):
@@ -198,8 +196,7 @@ class GaiaVolume():
         ax[0].set_box_aspect(1)
         ax[1].set_box_aspect(1)
 
-        ax[0].set_title(r"$R_{gal}$="+f"{r_cut}"+r", $\Phi_{gal}$=" + f"{phi_cut}")
-       # ax[0].set_title(r"$R_gal$=" + r_cut + r", $\Phi_{gal}$=" + phi_cut)
+        ax[0].set_title(r"$R_{gal}$=" + f"{r_cut}" + r", $\Phi_{gal}$=" + f"{phi_cut}")
 
         ax[0].set_xlabel("Z [kpc]")
         ax[0].set_ylabel("$V_{Z}$ [kpc]")
@@ -208,4 +205,3 @@ class GaiaVolume():
         ax[1].set_ylabel("$R_{Z}$")
         plt.savefig(f"results/phase_spiral_R{r_cut}_phi{phi_cut}.png", bbox_inches="tight")
         plt.show()
-

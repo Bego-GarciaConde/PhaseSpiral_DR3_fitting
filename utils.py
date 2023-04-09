@@ -1,13 +1,7 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import cm
+
 import matplotlib.colors as mcolors
 import matplotlib.gridspec
-from matplotlib import rcParams
-from scipy.optimize import minimize
-from scipy.interpolate import interp1d
 from scipy import stats
-
 from config import *
 
 

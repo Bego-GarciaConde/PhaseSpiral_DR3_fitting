@@ -1,7 +1,6 @@
 # authors: Begoña García-Conde and Marcel Bernet
 
 from astropy.table import Table
-import hdbscan
 from GaiaVolume import *
 from config import *
 
