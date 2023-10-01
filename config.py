@@ -8,7 +8,7 @@ FILENAME = 'DR3_photogeo_ruwe14_GAL6D.fits'
 VPHI_SUN = -236  #Azimutal velocity of the Sun in km/s
 
 
-R_CUT = 8.5 #galactocentric R of the phase spiral we want to fit in kpc
+R_CUT = 7.8 #galactocentric R of the phase spiral we want to fit in kpc
 R_BIN = 0.5 #R bin in kpc
 PHI_CUT = 0 #galactocentric phi
 PHI_BIN = 10 #phi bin
@@ -48,8 +48,7 @@ aspect = (rangex[1] - rangex[0]) / (rangey[1] - rangey[0])
 deltax = (rangex[1] - rangex[0]) / (binsx * 1.)
 deltay = (rangey[1] - rangey[0]) / (binsy * 1.)
 
-
 #-------MCMC config------
-DRAWs = 2000
-TUNE = 1000
+DRAWs = 5000
+TUNE = 3000
 CORES = 2

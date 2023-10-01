@@ -9,12 +9,12 @@ from sklearn.preprocessing import PolynomialFeatures
 from utils import *
 import pymc3 as pm
 import json
-
+import seaborn as sns
 
 class GaiaVolume():
-    def __init__(self, data, r_cut, phi_cut=phi_cut, r_bin=0.8, phi_bin=PHI_BIN):
-        self.r_cut = r_cut
-        self.phi_cut = phi_cut
+    def __init__(self, data, r_cut, phi_cut, r_bin=R_BIN, phi_bin=PHI_BIN):
+        self.r_cut = R_CUT
+        self.phi_cut = PHI_CUT
         self.df = None
         self.scales = None
         self.H = None
@@ -140,6 +140,40 @@ class GaiaVolume():
         self.unwrapped_phiz = phiz[inlier_mask]
         self.unwrapped_rhoz = rz[inlier_mask]
 
+        color_palette = sns.color_palette('deep', np.max(clusterer.labels_) + 1)
+        cluster_colors = [color_palette[x] if x >= 0
+                          else (0.5, 0.5, 0.5)
+                          for x in clusterer.labels_]
+        cluster_member_colors = [sns.desaturate(x, p) for x, p in
+                                 zip(cluster_colors, clusterer.probabilities_)]
+
+        fig, ax = plt.subplots(1, 3, figsize=(12, 3))
+
+        sc = ax[0].imshow(self.H.T, origin='lower', cmap='inferno_r',
+                          extent=[self.xedges[0], self.xedges[-1], self.yedges[0], self.yedges[-1]],
+                          aspect='auto')
+
+        ax[0].set_box_aspect(1)
+        ax[2].plot(line_X, line_y_ransac, color="cornflowerblue", linewidth=2, label="RANSAC regressor")
+        # ax[1].scatter(self.unwrapped_phiz, self.unwrapped_rhoz, label='Unwrapped spiral', color='blue', alpha=0.3)
+        ax[1].scatter(self.data_polar["Phi"], self.data_polar["R"], c=labels, cmap='rainbow')
+        ax[1].scatter(central_coords[:, 0], central_coords[:, 1], marker='x', s=200, linewidths=3, color='black',
+                      label='Cluster Centers')
+
+        ax[2].scatter(self.data_polar["Phi_trans"], self.data_polar["R"], c=labels, cmap='rainbow')
+
+        ax[2].plot(line_X, line_y_ransac, color="cornflowerblue", linewidth=2, label="RANSAC regressor")
+
+        ax[0].set_xlabel("Z")
+        ax[0].set_ylabel("VZ")
+
+        ax[1].set_ylabel("R")
+        ax[1].set_xlabel(r"$\phi$")
+
+        ax[2].set_ylabel("R")
+        ax[2].set_xlabel(r"$\phi$")
+        plt.subplots_adjust(left=0, bottom=0., right=1, top=1, wspace=0.2, hspace=0.0)
+        plt.savefig(f"results/Unwrapping/unwrapping_phase_spiral_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
     def min_squared_spiral_fittin(self):
         # ----- LINEAR, QUADRATIC, LOG REGRESSION---- WHICH ONE FITS BETTER?----
         regr = LinearRegression()
@@ -196,15 +230,15 @@ class GaiaVolume():
         ax[0].set_box_aspect(1)
         ax[1].set_box_aspect(1)
 
-        ax[0].set_title(r"$R_{gal}$=" + f"{R_CUT}" + r", $\Phi_{gal}$=" + f"{phi_cut}")
+        ax[0].set_title(r"$R_{gal}$=" + f"{R_CUT}" + r", $\Phi_{gal}$=" + f"{PHI_CUT}")
 
         ax[0].set_xlabel("Z [kpc]")
         ax[0].set_ylabel("$V_{Z}$ [kpc]")
 
         ax[1].set_xlabel("$\Phi_{Z}$")
         ax[1].set_ylabel("$R_{Z}$")
-        plt.savefig(f"results/phase_spiral_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
-        plt.show()
+        plt.savefig(f"results/Min_squared/phase_spiral_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
+      #  plt.show()
 
     def mcmc_spiral_fitting(self):
         """
@@ -221,7 +255,10 @@ class GaiaVolume():
             mu = alpha + beta * x
             # Likelihood function
             likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)  #
-            trace_linear = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            try:
+                trace_linear = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            except:
+                trace_linear = pm.sample(DRAWs, tune=TUNE+1000, cores=CORES)
 
         with pm.Model() as quadratic_model:
             # PRIORS
@@ -235,7 +272,10 @@ class GaiaVolume():
 
             # Likelihood function
             likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)
-            trace_quadratic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            try:
+                trace_quadratic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            except:
+                trace_quadratic = pm.sample(DRAWs, tune=TUNE+1000, cores=CORES)
 
         with pm.Model() as cubic_model:
             # PRIORS
@@ -250,7 +290,10 @@ class GaiaVolume():
 
             # Likelihood function
             likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)
-            trace_cubic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            try:
+                trace_cubic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+            except:
+                trace_cubic = pm.sample(DRAWs, tune=TUNE+1000, cores=CORES)
 
         def draw_hist(i, tracing, title):
             """
@@ -270,14 +313,14 @@ class GaiaVolume():
         draw_hist(0, trace_linear['alpha'], "Intercept")
         draw_hist(1, trace_linear['beta'], "Coef")
         draw_hist(2, trace_linear['sigma'], "Sigma")
-        plt.savefig(f"results/MCMC_models/linear_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+        plt.savefig(f"results/MCMC_models/linear_model_ps_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
 
         fig, ax = plt.subplots(1, 4, figsize=(15, 3))
         draw_hist(0, trace_quadratic['alpha'], "Intercept")
         draw_hist(1, trace_quadratic['beta1'], "Coef")
         draw_hist(2, trace_quadratic['beta2'], "Coef2")
         draw_hist(3, trace_quadratic['sigma'], "Sigma")
-        plt.savefig(f"results/MCMC_models/quadratic_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+        plt.savefig(f"results/MCMC_models/quadratic_model_ps_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
 
         fig, ax = plt.subplots(1, 5, figsize=(18, 3))
         draw_hist(0, trace_cubic['alpha'], "Intercept")
@@ -285,7 +328,7 @@ class GaiaVolume():
         draw_hist(2, trace_cubic['beta2'], "Coef2")
         draw_hist(3, trace_cubic['beta2'], "Coef2")
         draw_hist(4, trace_cubic['sigma'], "Sigma")
-        plt.savefig(f"results/MCMC_models/cubic_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+        plt.savefig(f"results/MCMC_models/cubic_model_ps_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
 
         def y_predict(x_range):
             y_pred_linear = np.mean(trace_linear["alpha"]) + np.mean(trace_linear["beta"]) * x_range
@@ -307,7 +350,7 @@ class GaiaVolume():
 
         # ax.plot(x, true_regression_line, label="true regression line", lw=2.0)
         plt.legend(loc=0)
-        plt.savefig(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+        plt.savefig(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{PHI_CUT}.png", bbox_inches="tight")
 
         def save_data(results_data, model, trace, variables):
             """
@@ -323,5 +366,5 @@ class GaiaVolume():
         save_data(results_mcmc, "quadratic", trace_quadratic, ["alpha", "beta1", "beta2", "sigma"])
         save_data(results_mcmc, "cubic", trace_cubic, ["alpha", "beta1", "beta2", "beta3", "sigma"])
 
-        with open(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{phi_cut}.json", "w") as outfile:
+        with open(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{PHI_CUT}.json", "w") as outfile:
             json.dump(results_mcmc, outfile)
