@@ -1,5 +1,4 @@
 import hdbscan
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from skimage import feature
@@ -7,12 +6,13 @@ from sklearn import linear_model
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import PolynomialFeatures
-
 from utils import *
+import pymc3 as pm
+import json
 
 
 class GaiaVolume():
-    def __init__(self, data, r_cut, phi_cut=phi_cut, r_bin=0.8, phi_bin=phi_bin):
+    def __init__(self, data, r_cut, phi_cut=phi_cut, r_bin=0.8, phi_bin=PHI_BIN):
         self.r_cut = r_cut
         self.phi_cut = phi_cut
         self.df = None
@@ -28,7 +28,7 @@ class GaiaVolume():
 
         def filter_volume():
             df = data[(np.abs(data['phi'] - phi_cut) < phi_bin) &
-                      (np.abs(data['R'] * data['Vphi'] - r_cut * Vphi_sun) < np.abs(r_bin * Vphi_sun))]
+                      (np.abs(data['R'] * data['Vphi'] - r_cut * VPHI_SUN) < np.abs(r_bin * VPHI_SUN))]
             return df
 
         self.df = filter_volume()
@@ -90,7 +90,7 @@ class GaiaVolume():
         # The first approach is an arquimedean spiral: straght line in polar coordinates
         # In this space there could be several wraps, we colate them and sort them to have a continous line
 
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, min_samples=MIN_SAMPLES)
         clusterer.fit(self.data_polar)
         labels = clusterer.labels_
         unique_labels = np.unique(labels)
@@ -140,7 +140,7 @@ class GaiaVolume():
         self.unwrapped_phiz = phiz[inlier_mask]
         self.unwrapped_rhoz = rz[inlier_mask]
 
-    def spiral_fitting(self):
+    def min_squared_spiral_fittin(self):
         # ----- LINEAR, QUADRATIC, LOG REGRESSION---- WHICH ONE FITS BETTER?----
         regr = LinearRegression()
 
@@ -196,12 +196,132 @@ class GaiaVolume():
         ax[0].set_box_aspect(1)
         ax[1].set_box_aspect(1)
 
-        ax[0].set_title(r"$R_{gal}$=" + f"{r_cut}" + r", $\Phi_{gal}$=" + f"{phi_cut}")
+        ax[0].set_title(r"$R_{gal}$=" + f"{R_CUT}" + r", $\Phi_{gal}$=" + f"{phi_cut}")
 
         ax[0].set_xlabel("Z [kpc]")
         ax[0].set_ylabel("$V_{Z}$ [kpc]")
 
         ax[1].set_xlabel("$\Phi_{Z}$")
         ax[1].set_ylabel("$R_{Z}$")
-        plt.savefig(f"results/phase_spiral_R{r_cut}_phi{phi_cut}.png", bbox_inches="tight")
+        plt.savefig(f"results/phase_spiral_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
         plt.show()
+
+    def mcmc_spiral_fitting(self):
+        """
+        Perform MCMC to fit the spiral in polar coordinates using PyMC3.
+        """
+        x = self.unwrapped_phiz
+        y = self.unwrapped_rhoz
+        with pm.Model() as linear_model:
+            # PRIORS
+            alpha = pm.Normal('alpha', mu=0, sd=10)
+            beta = pm.Normal('beta', mu=0, sd=10)
+            sigma = pm.HalfNormal('sigma', sd=1)
+            # regression model
+            mu = alpha + beta * x
+            # Likelihood function
+            likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)  #
+            trace_linear = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+
+        with pm.Model() as quadratic_model:
+            # PRIORS
+            alpha = pm.Normal('alpha', mu=0, sd=10)
+            beta1 = pm.Normal('beta1', mu=0, sd=10)
+            beta2 = pm.Normal('beta2', mu=0, sd=10)
+            sigma = pm.HalfNormal('sigma', sd=1)
+
+            # regression model
+            mu = alpha + beta1 * x + beta2 * x ** 2
+
+            # Likelihood function
+            likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)
+            trace_quadratic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+
+        with pm.Model() as cubic_model:
+            # PRIORS
+            alpha = pm.Normal('alpha', mu=0, sd=10)
+            beta1 = pm.Normal('beta1', mu=0, sd=10)
+            beta2 = pm.Normal('beta2', mu=0, sd=10)
+            beta3 = pm.Normal('beta3', mu=0, sd=10)
+            sigma = pm.HalfNormal('sigma', sd=1)
+
+            # regression model
+            mu = alpha + beta1 * x + beta2 * x ** 2 + beta3 * x ** 3
+
+            # Likelihood function
+            likelihood = pm.Normal('y', mu=mu, sd=sigma, observed=y)
+            trace_cubic = pm.sample(DRAWs, tune=TUNE, cores=CORES)
+
+        def draw_hist(i, tracing, title):
+            """
+            Plot a histogram with the results of each variable of the MCMC fitting.
+            Args:
+                ax (matplotlib.axes.Axes): The axes to plot on.
+                tracing (numpy.ndarray): Data to plot.
+                title (str): The title of the plot.
+            """
+            a = ax[i].hist(tracing, alpha=0.7, rwidth=0.95)
+            ax[i].axvline(x=np.mean(tracing), color="red", ls="--", lw=2, alpha=0.5, label=f"{np.mean(tracing):.3f}")
+            ax[i].grid(axis='y', alpha=0.75)
+            ax[i].set_title(title)
+            ax[i].legend()
+
+        fig, ax = plt.subplots(1, 3, figsize=(11, 3))
+        draw_hist(0, trace_linear['alpha'], "Intercept")
+        draw_hist(1, trace_linear['beta'], "Coef")
+        draw_hist(2, trace_linear['sigma'], "Sigma")
+        plt.savefig(f"results/MCMC_models/linear_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+
+        fig, ax = plt.subplots(1, 4, figsize=(15, 3))
+        draw_hist(0, trace_quadratic['alpha'], "Intercept")
+        draw_hist(1, trace_quadratic['beta1'], "Coef")
+        draw_hist(2, trace_quadratic['beta2'], "Coef2")
+        draw_hist(3, trace_quadratic['sigma'], "Sigma")
+        plt.savefig(f"results/MCMC_models/quadratic_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+
+        fig, ax = plt.subplots(1, 5, figsize=(18, 3))
+        draw_hist(0, trace_cubic['alpha'], "Intercept")
+        draw_hist(1, trace_cubic['beta1'], "Coef")
+        draw_hist(2, trace_cubic['beta2'], "Coef2")
+        draw_hist(3, trace_cubic['beta2'], "Coef2")
+        draw_hist(4, trace_cubic['sigma'], "Sigma")
+        plt.savefig(f"results/MCMC_models/cubic_model_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+
+        def y_predict(x_range):
+            y_pred_linear = np.mean(trace_linear["alpha"]) + np.mean(trace_linear["beta"]) * x_range
+            y_pred_quadratic = np.mean(trace_quadratic["alpha"]) + np.mean(
+                trace_quadratic["beta1"]) * x_range + np.mean(trace_quadratic["beta2"]) * x_range ** 2
+            y_pred_cubic = np.mean(trace_cubic["alpha"]) + np.mean(trace_cubic["beta1"]) * x_range + np.mean(
+                trace_cubic["beta2"]) * x_range ** 2 + np.mean(trace_cubic["beta3"]) * x_range ** 3
+            return y_pred_linear, y_pred_quadratic, y_pred_cubic
+
+        fig = plt.figure(figsize=(7, 5))
+        ax = fig.add_subplot(111, xlabel="phi", ylabel="rho", title="Data")
+        # ax.plot(x, y, "o", color = "black", label="Unwarapped spiral")
+        ax.scatter(x, y, label='Unwrapped spiral', color='blue', alpha=0.3)
+        x_range = np.linspace(min(x), max(x), 100)  # Create a range of X values for the line
+        y_pred_linear, y_pred_quadratic, y_pred_cubic = y_predict(x_range)
+        plt.plot(x_range, y_pred_linear, label='Linear model', color='blue', linestyle=':', alpha=0.5)
+        plt.plot(x_range, y_pred_quadratic, label='Quadratic model', color='red', linestyle='-', alpha=0.5)
+        plt.plot(x_range, y_pred_cubic, label='Cubic model', color='green', linestyle='--', alpha=0.5)
+
+        # ax.plot(x, true_regression_line, label="true regression line", lw=2.0)
+        plt.legend(loc=0)
+        plt.savefig(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{phi_cut}.png", bbox_inches="tight")
+
+        def save_data(results_data, model, trace, variables):
+            """
+            Save results in json
+            """
+            results_data[model] = {}
+            for variable in variables:
+                results_data[model][f"mean_{variable}"] = np.mean(trace[variable])
+                results_data[model][f"std_{variable}"] = np.std(trace[variable])
+
+        results_mcmc = {}
+        save_data(results_mcmc, "linear", trace_linear, ["alpha", "beta", "sigma"])
+        save_data(results_mcmc, "quadratic", trace_quadratic, ["alpha", "beta1", "beta2", "sigma"])
+        save_data(results_mcmc, "cubic", trace_cubic, ["alpha", "beta1", "beta2", "beta3", "sigma"])
+
+        with open(f"results/MCMC_models/result_MCMC_ps_R{R_CUT}_phi{phi_cut}.json", "w") as outfile:
+            json.dump(results_mcmc, outfile)

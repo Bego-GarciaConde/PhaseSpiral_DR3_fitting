@@ -29,8 +29,7 @@ def fit_curve(a, data):
 def calc_histogram_cartesian(df, z_bins, vz_bins, weights=None):
     if weights is None:
         H, xedges, yedges = np.histogram2d(df['Z'].values, df['VZ'].values, bins=[z_bins, vz_bins],
-                                           range=[rangex, rangey],
-                                           normed=mcolors.PowerNorm(3))
+                                           range=[rangex, rangey])
     elif weights == "Vphi":
         H, xedges, yedges = np.histogram2d(df['Z'].values, df['VZ'].values,
                                            bins=[z_bins, vz_bins], weights=df['Vphi'].values)

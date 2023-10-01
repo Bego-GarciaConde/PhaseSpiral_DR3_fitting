@@ -2,36 +2,36 @@ import numpy as np
 
 # ---General Variables----
 
-filepath = '/home/bego/Gaia_DR3/DR3/'
-filename = 'DR3_photogeo_ruwe14_GAL6D.fits'
+FILEPATH = '/home/bego/Gaia_DR3/DR3/'
+FILENAME = 'DR3_photogeo_ruwe14_GAL6D.fits'
 
-Vphi_sun = -236  #Azimutal velocity of the Sun in km/s
-
-
-r_cut = 9 #galactocentric R of the phase spiral we want to fit in kpc
-R_bin = 0.5 #R bin in kpc
-phi_cut = -2 #galactocentric phi
-phi_bin = 10 #phi bin
+VPHI_SUN = -236  #Azimutal velocity of the Sun in km/s
 
 
-wraps = 3 #Estimated wraps of the phase spiral
+R_CUT = 8.5 #galactocentric R of the phase spiral we want to fit in kpc
+R_BIN = 0.5 #R bin in kpc
+PHI_CUT = 0 #galactocentric phi
+PHI_BIN = 10 #phi bin
 
-rz_min = 0.2   #Min and max polar rho for unwrapping the spiral
-rz_max = 1
 
-phiz_bin = 0.01
+WRAPS = 3 #Estimated wraps of the phase spiral
+
+RZ_MIN = 0.2   #Min and max polar rho for unwrapping the spiral
+RZ_MAX = 1
+
+PHIZ_BIN = 0.01
 
 #RANSAC settings
-ransac_it = 500
-ransac_threshold = 0.5
+RANSAC_IT = 500
+RANSAC_THRESHOLD = 0.5
 # Wavelet params
-rz_bin = 0.005
-blend = 16
-wavelet_size = 8  # Pixels of rz_bins to detect
+RZ_BIN = 0.005
+BLEND = 16
+WAVELET_SIZE = 8  # Pixels of rz_bins to detect
 
 #HDBSCAN settings
-min_cluster_size = 20
-min_samples = 5
+MIN_CLUSTER_SIZE = 20
+MIN_SAMPLES = 5
 
 # -------- For 2D histogram----
 z_bins = np.arange(-1, 1, 0.01)
@@ -47,3 +47,9 @@ binsy = (np.max(vz_bins) - np.min(vz_bins)) / len(vz_bins)
 aspect = (rangex[1] - rangex[0]) / (rangey[1] - rangey[0])
 deltax = (rangex[1] - rangex[0]) / (binsx * 1.)
 deltay = (rangey[1] - rangey[0]) / (binsy * 1.)
+
+
+#-------MCMC config------
+DRAWs = 2000
+TUNE = 1000
+CORES = 2

@@ -7,13 +7,14 @@ from config import *
 
 def main():
     print("Reading data...")
-    dat = Table.read(filepath + filename, format='fits')
+    dat = Table.read(FILEPATH + FILENAME, format='fits')
     df = dat.to_pandas()
     # We select the volume of the Gaia data
-    volume = GaiaVolume(data=df, r_cut=r_cut)
+    volume = GaiaVolume(data=df, r_cut=R_CUT)
     volume.apply_unwrap()
     volume.apply_ransac_filter()
-    volume.spiral_fitting()
+   # volume.min_squared_spiral_fittin()
+    volume.mcmc_spiral_fitting()
 
 
 if __name__ == "__main__":
